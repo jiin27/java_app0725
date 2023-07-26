@@ -39,6 +39,9 @@ public class DiaryMain extends JFrame{
 	//날짜 셀
 	NumCell[][] numCells=new NumCell[6][7];
 	
+	//팝업창
+	Popup popup;
+	
 	public DiaryMain() {
 		//UI 생성하기
 		p_north=new JPanel();
@@ -57,7 +60,7 @@ public class DiaryMain extends JFrame{
 		//탭 메뉴 처리
 		tab=new TabMenu[4];
 		thread=new Thread[4];
-		
+				
 		for(int i=0; i<tab.length; i++) {
 			tab[i]=new TabMenu(tabColor[i], -95, 30+(i*71), 100, 70);
 			thread[i] = new Thread(tab[i]);
@@ -93,11 +96,15 @@ public class DiaryMain extends JFrame{
 		
 		createCell(); //달력에 사용될 셀 출력
 		printTitle(); //달력 제목 출력
+		printNum(); //날짜 출력
 		
 		setSize(1100, 850);
 		setVisible(true);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
+		
+		//팝업창 생성 및 부착
+		popup=new Popup();
 		
 		//버튼과 리스너 연결
 		//내부익명클래스를 줄여서 코드를 작성하고 싶다면, 객체차원까지 사용할 필요 없이 
@@ -126,7 +133,7 @@ public class DiaryMain extends JFrame{
 		//날짜 셀 만들기
 		for(int a=0; a<6; a++) {
 			for(int i=0; i<7; i++) {
-				NumCell cell=new NumCell(Color.WHITE, 100, 100);
+				NumCell cell=new NumCell(this, Color.WHITE, 100, 100);
 				cell.setTitle("0");
 				//한 층에 소속된 호수들을 배열에 채우기
 				numCells[a][i]=cell;
@@ -148,6 +155,7 @@ public class DiaryMain extends JFrame{
 		int mm=cal.get(Calendar.MONTH);
 		cal.set(Calendar.MONTH, mm-1); //조작
 		printTitle();
+		printNum();
 	}
 	
 	//다음 날짜 처리
@@ -157,18 +165,42 @@ public class DiaryMain extends JFrame{
 		cal.set(Calendar.MONTH, mm+1); //조작
 		printTitle(); //해당 연,월 날짜 제목 출력
 		printNum(); //날짜 출력
+		//기존 셀이 있는 아이콘도 삭제
 	}
 	
 	//해당 월의 시작 요일 구하기
-	public void getStartDayOfWeek() {
+	public int getStartDayOfWeek() {
 		//날짜 객체 하나를 해당 월의 1일로 조작해서, 그 날이 무슨 요일인지 구하기
 		Calendar c=Calendar.getInstance(); //조작용 객체(망가져도 상관없음)
-		int mm=cal.get(Calendar.MONTH);
 		
-		c.set(mm, 1);
+		int yy=cal.get(Calendar.YEAR); //현재 보고 있는 연도
+		int mm=cal.get(Calendar.MONTH); //현재 보고 있는 월
+		
+		c.set(yy, mm, 1); //1일로 조작
+		
+//		c.set(Calendar.YEAR, value);
+//		c.set(mm, 1); //조작
+		
 		int day=c.get(Calendar.DAY_OF_WEEK); //1일의 요일 구하기
 		
-		System.out.println(day);
+		//System.out.println(day);
+		return day; //요일 반환
+	}
+	
+	//해당 월이 며칠까지 있는지
+	public int getLastDateOfMonth() {
+		//현재 보고 있는 월의 다음 월 및 0일로 조작을 가한 후
+		//며칠인지 물어보자.
+		
+		int yy=cal.get(Calendar.YEAR);
+		int mm=cal.get(Calendar.MONTH);
+		
+		//조작하기
+		Calendar c=Calendar.getInstance();
+		c.set(yy, mm+1, 0);
+		int dd=c.get(Calendar.DATE);
+		
+		return dd;
 	}
 	
 	//날짜 숫자 출력처리
@@ -177,11 +209,29 @@ public class DiaryMain extends JFrame{
 		for(int a=0; a<numCells.length; a++) {
 			for(int i=0; i<numCells[a].length; i++) {
 				numCells[a][i].setTitle("");
+				
+				//아이콘 삭제하기
+				numCells[a][i].iconBox.removeAll();
 			}
 		}
 		
+		int startDay=getStartDayOfWeek(); //해당 월이 무슨 요일부터 시작하는지 값을 얻기
+		int lastDate=getLastDateOfMonth(); //해당 월이 며칠까지 있는지 값을 얻기
+		//System.out.println(lastDate+"까지예요");
+		
 		//각 셀에 알맞는 숫자 채우기
-		getStartDayOfWeek();
+		int count=0; //셀의 순번을 체크하기 위한 변수
+		int num=0; //실제 날짜를 담당할 변수
+		
+		for(int a=0; a<numCells.length; a++) {
+			for(int i=0; i<numCells[a].length; i++) {
+				count++;
+				if(count>=startDay && num<lastDate) {
+					num++;
+					numCells[a][i].setTitle(Integer.toString(num));
+				}
+			}
+		}
 	}
 	
 	public static void main(String[] args) {
